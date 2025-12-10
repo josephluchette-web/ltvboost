@@ -1,68 +1,53 @@
-import { NextResponse } from 'next/server'
-import { hash } from 'bcryptjs'
-import { prisma } from '@/lib/prisma'
-import { z } from 'zod'
-
-const registerSchema = z.object({
-  email: z.string().email('Invalid email address'),
-  password: z.string().min(8, 'Password must be at least 8 characters'),
-  name: z.string().min(1, 'Name is required'),
-})
+import { NextResponse } from "next/server";
+import bcrypt from "bcryptjs";
+import { prisma } from "@/lib/prisma"; // 🔁 change if your prisma client is somewhere else
 
 export async function POST(req: Request) {
   try {
-    const body = await req.json()
-    
-    // Validate input
-    const validatedData = registerSchema.parse(body)
-    const { email, password, name } = validatedData
+    const { name, email, password } = await req.json();
 
-    // Check if user already exists
+    if (!name || !email || !password) {
+      return NextResponse.json(
+        { error: "Missing required fields." },
+        { status: 400 }
+      );
+    }
+
+    if (password.length < 8) {
+      return NextResponse.json(
+        { error: "Password must be at least 8 characters." },
+        { status: 400 }
+      );
+    }
+
     const existingUser = await prisma.user.findUnique({
       where: { email },
-    })
+    });
 
     if (existingUser) {
       return NextResponse.json(
-        { error: 'User with this email already exists' },
+        { error: "An account with that email already exists." },
         { status: 400 }
-      )
+      );
     }
 
-    // Hash password
-    const hashedPassword = await hash(password, 12)
+    const hashedPassword = await bcrypt.hash(password, 10);
 
-    // Create user
-    const user = await prisma.user.create({
+    // ⚠️ match this to your Prisma User model field name
+    await prisma.user.create({
       data: {
+        name,
         email,
         password: hashedPassword,
-        name,
       },
-    })
+    });
 
+    return NextResponse.json({ success: true });
+  } catch (err) {
+    console.error("[REGISTER_API_ERROR]", err);
     return NextResponse.json(
-      {
-        user: {
-          id: user.id,
-          email: user.email,
-          name: user.name,
-        },
-      },
-      { status: 201 }
-    )
-  } catch (error) {
-    if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        { error: error.errors[0].message },
-        { status: 400 }
-      )
-    }
-
-    console.error('Registration error:', error)
-    return NextResponse.json(
-      { error: 'Something went wrong. Please try again.' },
+      { error: "Something went wrong while creating your account." },
       { status: 500 }
-    )
+    );
   }
 }

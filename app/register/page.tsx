@@ -1,130 +1,126 @@
-'use client'
+"use client";
 
-import { useState } from 'react'
-import { useRouter } from 'next/navigation'
-import Link from 'next/link'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { TrendingUp } from 'lucide-react'
+import { useState } from "react";
+import { useRouter } from "next/navigation";
 
 export default function RegisterPage() {
-  const router = useRouter()
-  const [isLoading, setIsLoading] = useState(false)
-  const [error, setError] = useState('')
+  const router = useRouter();
 
-  async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault()
-    setIsLoading(true)
-    setError('')
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
 
-    const formData = new FormData(e.currentTarget)
-    const email = formData.get('email') as string
-    const password = formData.get('password') as string
-    const name = formData.get('name') as string
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setError(null);
+    setLoading(true);
 
     try {
-      const res = await fetch('/api/auth/register', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password, name }),
-      })
+      const res = await fetch("/api/auth/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name, email, password }),
+      });
 
-      const data = await res.json()
+      const contentType = res.headers.get("content-type") ?? "";
+      let data: any = null;
 
-      if (!res.ok) {
-        throw new Error(data.error || 'Something went wrong')
+      if (contentType.includes("application/json")) {
+        data = await res.json();
       }
 
-      // Redirect to login after successful registration
-      router.push('/login?registered=true')
+      if (!res.ok) {
+        throw new Error(data?.error || "Failed to create account.");
+      }
+
+      // ✅ Success: send them to login
+      router.push("/login?registered=1");
     } catch (err: any) {
-      setError(err.message)
+      console.error("[REGISTER_FORM_ERROR]", err);
+      setError(err.message || "Something went wrong. Please try again.");
     } finally {
-      setIsLoading(false)
+      setLoading(false);
     }
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background p-4">
-      <div className="w-full max-w-md space-y-8">
-        <div className="flex flex-col items-center space-y-2">
-          <Link href="/" className="flex items-center space-x-2">
-            <TrendingUp className="h-8 w-8 text-primary" />
-            <span className="text-2xl font-bold">LTVBoost</span>
-          </Link>
+    <div className="min-h-screen flex items-center justify-center bg-white">
+      <div className="w-full max-w-md px-8 py-10 rounded-xl border border-gray-200 shadow-sm bg-white">
+        <div className="flex flex-col items-center mb-6">
+          <div className="text-xl font-semibold mb-1">LTVBoost</div>
         </div>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Create an account</CardTitle>
-            <CardDescription>
-              Enter your details to get started with LTVBoost
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={onSubmit} className="space-y-4">
-              {error && (
-                <div className="bg-destructive/10 text-destructive text-sm p-3 rounded-md">
-                  {error}
-                </div>
-              )}
+        <h1 className="text-2xl font-semibold mb-1">Create an account</h1>
+        <p className="text-sm text-gray-500 mb-4">
+          Enter your details to get started with LTVBoost
+        </p>
 
-              <div className="space-y-2">
-                <Label htmlFor="name">Full Name</Label>
-                <Input
-                  id="name"
-                  name="name"
-                  type="text"
-                  placeholder="John Doe"
-                  required
-                  disabled={isLoading}
-                />
-              </div>
+        {error && (
+          <div className="mb-4 rounded-md bg-red-100 px-3 py-2 text-sm text-red-700">
+            {error}
+          </div>
+        )}
 
-              <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
-                <Input
-                  id="email"
-                  name="email"
-                  type="email"
-                  placeholder="you@example.com"
-                  required
-                  disabled={isLoading}
-                />
-              </div>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium mb-1">
+              Full Name
+            </label>
+            <input
+              type="text"
+              className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              required
+            />
+          </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="password">Password</Label>
-                <Input
-                  id="password"
-                  name="password"
-                  type="password"
-                  placeholder="••••••••"
-                  required
-                  minLength={8}
-                  disabled={isLoading}
-                />
-                <p className="text-xs text-muted-foreground">
-                  Must be at least 8 characters
-                </p>
-              </div>
+          <div>
+            <label className="block text-sm font-medium mb-1">Email</label>
+            <input
+              type="email"
+              className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+            />
+          </div>
 
-              <Button type="submit" className="w-full" disabled={isLoading}>
-                {isLoading ? 'Creating account...' : 'Create account'}
-              </Button>
-            </form>
+          <div>
+            <label className="block text-sm font-medium mb-1">
+              Password
+            </label>
+            <input
+              type="password"
+              className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+              minLength={8}
+            />
+            <p className="mt-1 text-xs text-gray-500">
+              Must be at least 8 characters
+            </p>
+          </div>
 
-            <div className="mt-4 text-center text-sm">
-              Already have an account?{' '}
-              <Link href="/login" className="text-primary hover:underline">
-                Log in
-              </Link>
-            </div>
-          </CardContent>
-        </Card>
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full rounded-md bg-blue-600 text-white py-2 text-sm font-medium hover:bg-blue-700 disabled:opacity-60 disabled:cursor-not-allowed"
+          >
+            {loading ? "Creating account..." : "Create account"}
+          </button>
+        </form>
+
+        <p className="mt-4 text-sm text-center text-gray-600">
+          Already have an account?{" "}
+          <a href="/login" className="text-blue-600 hover:underline">
+            Log in
+          </a>
+        </p>
       </div>
     </div>
-  )
+  );
 }
