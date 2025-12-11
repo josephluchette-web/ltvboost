@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import bcrypt from 'bcryptjs';
 import { prisma } from '@/lib/prisma';
 
+
 export async function POST(req: Request) {
   try {
     const body = await req.json();
@@ -47,13 +48,17 @@ export async function POST(req: Request) {
       { success: true, userId: user.id },
       { status: 201 }
     );
-  } catch (err) {
-    console.error('[REGISTER_API_ERROR]', err);
-    return NextResponse.json(
-      {
-        error: 'Something went wrong while creating your account.',
-      },
-      { status: 500 }
-    );
-  }
+} catch (err: any) {
+  console.error('[REGISTER_API_ERROR]', err);
+
+  // TEMP: expose the real error so we can debug
+  const message =
+    (err && err.message) ||
+    (typeof err === 'string' ? err : 'Unknown server error');
+
+  return NextResponse.json(
+    { error: `DEBUG: ${message}` },
+    { status: 500 }
+  );
 }
+
