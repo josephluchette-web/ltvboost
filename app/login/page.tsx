@@ -42,11 +42,22 @@ function LoginPageInner() {
       });
 
       if (!result || result.error) {
-        setError(result?.error || 'Invalid email or password.');
+        let message = 'Invalid email or password.';
+
+        // When NextAuth explodes with CLIENT_FETCH_ERROR / <!DOCTYPE>
+        if (result?.error === 'CLIENT_FETCH_ERROR') {
+          message = 'There was a server error while signing in. Please try again.';
+        } else if (result?.error && result.error !== 'CredentialsSignin') {
+          // If our backend throws a custom message, show it
+          message = result.error;
+        }
+
+        setError(message);
         setIsLoading(false);
         return;
       }
 
+      // ✅ successful login
       router.push('/dashboard');
     } catch (err) {
       console.error(err);
