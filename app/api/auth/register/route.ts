@@ -1,40 +1,41 @@
-import { NextResponse } from "next/server";
-import bcrypt from "bcryptjs";
-import { prisma } from "@/lib/prisma"; // 🔁 change if your prisma client is somewhere else
+import { NextResponse } from 'next/server';
+import bcrypt from 'bcryptjs';
+import { prisma } from '@/lib/prisma';
 
 export async function POST(req: Request) {
   try {
-    const { name, email, password } = await req.json();
+    const body = await req.json();
+    const { name, email, password } = body as {
+      name?: string;
+      email?: string;
+      password?: string;
+    };
 
-    if (!name || !email || !password) {
+    // Basic validation
+    if (!name || !email || !password || password.length < 8) {
       return NextResponse.json(
-        { error: "Missing required fields." },
+        { error: 'Invalid input.' },
         { status: 400 }
       );
     }
 
-    if (password.length < 8) {
-      return NextResponse.json(
-        { error: "Password must be at least 8 characters." },
-        { status: 400 }
-      );
-    }
-
+    // Check if user already exists
     const existingUser = await prisma.user.findUnique({
       where: { email },
     });
 
     if (existingUser) {
       return NextResponse.json(
-        { error: "An account with that email already exists." },
+        { error: 'An account with that email already exists.' },
         { status: 400 }
       );
     }
 
+    // Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // ⚠️ match this to your Prisma User model field name
-    await prisma.user.create({
+    // ⚠️ Your Prisma User model MUST have "password String" for this:
+    const user = await prisma.user.create({
       data: {
         name,
         email,
@@ -42,11 +43,16 @@ export async function POST(req: Request) {
       },
     });
 
-    return NextResponse.json({ success: true });
-  } catch (err) {
-    console.error("[REGISTER_API_ERROR]", err);
     return NextResponse.json(
-      { error: "Something went wrong while creating your account." },
+      { success: true, userId: user.id },
+      { status: 201 }
+    );
+  } catch (err) {
+    console.error('[REGISTER_API_ERROR]', err);
+    return NextResponse.json(
+      {
+        error: 'Something went wrong while creating your account.',
+      },
       { status: 500 }
     );
   }
