@@ -1,7 +1,6 @@
-import { NextResponse } from 'next/server';
-import bcrypt from 'bcryptjs';
-import { prisma } from '@/lib/prisma';
-
+import { NextResponse } from "next/server";
+import bcrypt from "bcryptjs";
+import { prisma } from "@/lib/prisma";
 
 export async function POST(req: Request) {
   try {
@@ -15,7 +14,7 @@ export async function POST(req: Request) {
     // Basic validation
     if (!name || !email || !password || password.length < 8) {
       return NextResponse.json(
-        { error: 'Invalid input.' },
+        { error: "Invalid input." },
         { status: 400 }
       );
     }
@@ -27,7 +26,7 @@ export async function POST(req: Request) {
 
     if (existingUser) {
       return NextResponse.json(
-        { error: 'An account with that email already exists.' },
+        { error: "An account with that email already exists." },
         { status: 400 }
       );
     }
@@ -35,7 +34,7 @@ export async function POST(req: Request) {
     // Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // ⚠️ Your Prisma User model MUST have "password String" for this:
+    // ⚠️ Your Prisma User model MUST have `password String` for this
     const user = await prisma.user.create({
       data: {
         name,
@@ -48,16 +47,17 @@ export async function POST(req: Request) {
       { success: true, userId: user.id },
       { status: 201 }
     );
-} catch (err: any) {
-  console.error('[REGISTER_API_ERROR]', err);
+  } catch (err: any) {
+    console.error("[REGISTER_API_ERROR]", err);
 
-  // TEMP: expose the real error so we can debug
-  const message =
-    (err && err.message) ||
-    (typeof err === 'string' ? err : 'Unknown server error');
+    const message =
+      (err && err.message) ||
+      (typeof err === "string" ? err : "Unknown server error");
 
-  return NextResponse.json(
-    { error: `DEBUG: ${message}` },
-    { status: 500 }
-  );
+    // DEBUG: send real message back to the client so we can see it
+    return NextResponse.json(
+      { error: "DEBUG: " + message },
+      { status: 500 }
+    );
+  }
 }
